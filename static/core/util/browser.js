@@ -4,6 +4,8 @@
  * Licensed under MPL 2.0 (see LICENSE.txt)
  *
  * See README.md for usage and integration instructions.
+ *
+ * Browser feature support detection
  */
 
 import * as Log from './logging.js';
@@ -43,48 +45,108 @@ try {
 
 export const supportsCursorURIs = _supportsCursorURIs;
 
-let _supportsImageMetadata = false;
+let _hasScrollbarGutter = true;
 try {
-    new ImageData(new Uint8ClampedArray(4), 1, 1);
-    _supportsImageMetadata = true;
-} catch (ex) {
-    // ignore failure
+    // Create invisible container
+    const container = document.createElement('div');
+    container.style.visibility = 'hidden';
+    container.style.overflow = 'scroll'; // forcing scrollbars
+    document.body.appendChild(container);
+
+    // Create a div and place it in the container
+    const child = document.createElement('div');
+    container.appendChild(child);
+
+    // Calculate the difference between the container's full width
+    // and the child's width - the difference is the scrollbars
+    const scrollbarWidth = (container.offsetWidth - child.offsetWidth);
+
+    // Clean up
+    container.parentNode.removeChild(container);
+
+    _hasScrollbarGutter = scrollbarWidth != 0;
+} catch (exc) {
+    Log.Error("Scrollbar test exception: " + exc);
 }
-export const supportsImageMetadata = _supportsImageMetadata;
+export const hasScrollbarGutter = _hasScrollbarGutter;
+
+/*
+ * The functions for detection of platforms and browsers below are exported
+ * but the use of these should be minimized as much as possible.
+ *
+ * It's better to use feature detection than platform detection.
+ */
+
+/* OS */
 
 export function isMac() {
-    return navigator && !!(/mac/i).exec(navigator.platform);
+    return !!(/mac/i).exec(navigator.platform);
 }
 
 export function isWindows() {
-    return navigator && !!(/win/i).exec(navigator.platform);
+    return !!(/win/i).exec(navigator.platform);
 }
 
 export function isIOS() {
-    return navigator &&
-           (!!(/ipad/i).exec(navigator.platform) ||
+    return (!!(/ipad/i).exec(navigator.platform) ||
             !!(/iphone/i).exec(navigator.platform) ||
             !!(/ipod/i).exec(navigator.platform));
 }
 
 export function isAndroid() {
-    return navigator && !!(/android/i).exec(navigator.userAgent);
+    /* Android sets navigator.platform to Linux :/ */
+    return !!navigator.userAgent.match('Android ');
 }
+
+export function isChromeOS() {
+    /* ChromeOS sets navigator.platform to Linux :/ */
+    return !!navigator.userAgent.match(' CrOS ');
+}
+
+/* Browser */
 
 export function isSafari() {
-    return navigator && (navigator.userAgent.indexOf('Safari') !== -1 &&
-                         navigator.userAgent.indexOf('Chrome') === -1);
-}
-
-export function isIE() {
-    return navigator && !!(/trident/i).exec(navigator.userAgent);
-}
-
-export function isEdge() {
-    return navigator && !!(/edge/i).exec(navigator.userAgent);
+    return !!navigator.userAgent.match('Safari/...') &&
+           !navigator.userAgent.match('Chrome/...') &&
+           !navigator.userAgent.match('Chromium/...') &&
+           !navigator.userAgent.match('Epiphany/...');
 }
 
 export function isFirefox() {
-    return navigator && !!(/firefox/i).exec(navigator.userAgent);
+    return !!navigator.userAgent.match('Firefox/...') &&
+           !navigator.userAgent.match('Seamonkey/...');
 }
 
+export function isChrome() {
+    return !!navigator.userAgent.match('Chrome/...') &&
+           !navigator.userAgent.match('Chromium/...') &&
+           !navigator.userAgent.match('Edg/...') &&
+           !navigator.userAgent.match('OPR/...');
+}
+
+export function isChromium() {
+    return !!navigator.userAgent.match('Chromium/...');
+}
+
+export function isOpera() {
+    return !!navigator.userAgent.match('OPR/...');
+}
+
+export function isEdge() {
+    return !!navigator.userAgent.match('Edg/...');
+}
+
+/* Engine */
+
+export function isGecko() {
+    return !!navigator.userAgent.match('Gecko/...');
+}
+
+export function isWebKit() {
+    return !!navigator.userAgent.match('AppleWebKit/...') &&
+           !navigator.userAgent.match('Chrome/...');
+}
+
+export function isBlink() {
+    return !!navigator.userAgent.match('Chrome/...');
+}
